@@ -16,8 +16,8 @@ La consulta actual funciona, pero a medida que la tabla peajes.flujo_vehicular c
 
 
 ---
+### Creación de tabla y carga de data inicial
 
-## C. Creación de tabla y carga de data inicial
 ```SQL
 -- 1. Eliminar tabla si existe
 DROP TABLE IF EXISTS peajes.flujo_vehicular_2 CASCADE;
@@ -82,7 +82,7 @@ END;$$;
 
 ---
 
-## D. Consulta inicial (INEFICIENTE)
+## C. Consulta inicial (Ineficiente)
 
 ```SQL
 SELECT
@@ -106,7 +106,7 @@ ORDER BY
 
 ```
 
-## D. Análisis del plan de ejecución de la consulta ineficiente
+### Análisis del plan de ejecución de la consulta ineficiente
 
 ```sql
 QUERY PLAN
@@ -163,7 +163,7 @@ Métricas Iniciales:
 ```
 ---
 
-## E. Estrategia de mejora de la consulta (alternativa 1)
+## D. Estrategia de mejora de la consulta (alternativa 1)
 
 ```text
 Propuesta: Agregar indices y optimizar consulta
@@ -220,7 +220,7 @@ Propuesta: Agregar indices y optimizar consulta
         promedio_imd_pesados DESC;
 ```
 ---
-## F. Análisis del plan de ejecución de la consulta optimizada (Alternativa 1)
+### Análisis del plan de ejecución de la consulta optimizada (Alternativa 1)
 
 ```sql
 QUERY PLAN
@@ -257,7 +257,7 @@ Métricas:
     g. Execution Time: 18.347 ms
 ```
 ---
-## G. Estrategia de mejora de la consulta (alternativa 2)
+## E. Estrategia de mejora de la consulta (alternativa 2)
 
 ```text
 Propuesta 1: Agregar índices y optimizar consulta
@@ -318,7 +318,7 @@ ORDER BY
 
 ---
 
-## H. Análisis del plan de ejecución (alternativa 2)
+### Análisis del plan de ejecución (alternativa 2)
 
 ```sql
 QUERY PLAN
@@ -333,8 +333,6 @@ Sort  (cost=29510.67..29510.69 rows=7 width=71) (actual time=24.984..24.986 rows
 Planning Time: 0.102 ms
 Execution Time: 25.012 ms
 ```
-
-### Hallazgos y análisis
 
 ```text
 Hallazgos y análisis:
@@ -373,7 +371,7 @@ Métricas:
    - Al tener la lógica de “SUR” en una columna numérica (`region = 1`), las futuras actualizaciones de nombres de peaje no requieren re‑escritura del plan o re‑creación de índices.
 
 ---
-## I. Conclusión
+## F. Conclusión
 
 1. **Índices**: El índice `idx_fv_administ_fecha_corte_include` es el que realmente reduce el número de filas leídas, filtrando por `administ` y `fecha_corte`.  
    - El `INCLUDE` permite devolver las columnas necesarias para la agregación sin acceder al heap (solo 2 *heap fetches*).  
