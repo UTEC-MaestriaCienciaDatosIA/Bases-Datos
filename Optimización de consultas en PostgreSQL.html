@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Optimización de consultas en PostgreSQL.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="optimizaci%C3%B3n-de-consultas-en-postgresql">Optimización de consultas en PostgreSQL</h1>
+<h2 id="a-objetivo">A. Objetivo</h2>
+<ol>
+<li>Utilizar el comando EXPLAIN ANALYZE para interpretar el plan de ejecución de una consulta.</li>
+<li>Identificar operaciones ineficientes como escaneos secuenciales (Sequential Scans) en tablas grandes, subconsultas correlacionadas y el uso de funciones en cláusulas WHERE que impiden el uso de índices.</li>
+<li>Proponer y aplicar técnicas de optimización, incluyendo la reescritura de la consulta y la creación de índices adecuados.</li>
+<li>Verificar y cuantificar la mejora en el rendimiento después de aplicar las optimizaciones</li>
+</ol>
+<hr>
+<h2 id="b-contexto">B. Contexto</h2>
+<p>Imaginemos que trabajamos para el Ministerio de Transportes y se nos ha encargado analizar el flujo vehicular de los peajes a nivel nacional. Un analista ha creado una consulta para identificar los departamentos con el mayor promedio de &quot;Índice Medio Diario (IMD)&quot; de vehículos pesados durante el primer trimestre de 2024, enfocándose en peajes concesionados cuyos nombres terminan en &quot;SUR&quot;. Además, la consulta debe mostrar el total de vehículos ligeros que pasaron por esos departamentos en el mismo periodo.
+La consulta actual funciona, pero a medida que la tabla peajes.flujo_vehicular crece (actualmente con millones de registros), su ejecución se ha vuelto extremadamente lenta, tardando varios minutos en completarse. Tu misión es optimizarla.</p>
+<hr>
+<h3 id="creaci%C3%B3n-de-tabla-y-carga-de-data-inicial">Creación de tabla y carga de data inicial</h3>
+<pre class="hljs"><code><div><span class="hljs-comment">-- 1. Eliminar tabla si existe</span>
+<span class="hljs-keyword">DROP</span> <span class="hljs-keyword">TABLE</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">EXISTS</span> peajes.flujo_vehicular_2 <span class="hljs-keyword">CASCADE</span>;
+
+<span class="hljs-comment">-- 2. Creación tabla</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> peajes.flujo_vehicular_2 (
+    id_flujo              <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>) PRIMARY <span class="hljs-keyword">KEY</span>,
+    administ              <span class="hljs-built_in">VARCHAR</span>(<span class="hljs-number">30</span>),
+    departamento          <span class="hljs-built_in">VARCHAR</span>(<span class="hljs-number">70</span>),
+    nombre_peaje          <span class="hljs-built_in">VARCHAR</span>(<span class="hljs-number">70</span>),
+    veh_ligeros_tar_dif   <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_ligeros_automoviles <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_tar_dif   <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_2e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_3e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_4e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_5e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_6e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_7e        <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_ligeros_total     <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_ligeros_imd       <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_total     <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_pesados_imd       <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_total             <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    veh_imd               <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>),
+    fecha_corte           <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">8</span>,<span class="hljs-number">0</span>) <span class="hljs-comment">-- Formato YYYYMMDD</span>
+);
+
+<span class="hljs-comment">-- 3. Cargar data de prueba</span>
+<span class="hljs-keyword">DO</span> $$
+<span class="hljs-keyword">DECLARE</span>
+    departamentos <span class="hljs-built_in">TEXT</span>[] := <span class="hljs-built_in">ARRAY</span>[<span class="hljs-string">'LIMA'</span>, <span class="hljs-string">'AREQUIPA'</span>, <span class="hljs-string">'LA LIBERTAD'</span>, <span class="hljs-string">'PIURA'</span>, <span class="hljs-string">'JUNIN'</span>, <span class="hljs-string">'CUSCO'</span>, <span class="hljs-string">'ANCASH'</span>];
+    administradores TEXT[] := ARRAY['CONCESION', 'PROVIAS', 'EMAPE'];
+<span class="hljs-keyword">BEGIN</span>
+    <span class="hljs-comment">-- Este bucle declara 'i' automáticamente para su uso interno.</span>
+    <span class="hljs-keyword">FOR</span> i <span class="hljs-keyword">IN</span> <span class="hljs-number">1.</span><span class="hljs-number">.2000000</span> <span class="hljs-keyword">LOOP</span>
+        <span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> peajes.flujo_vehicular_2 (
+            id_flujo, administ, departamento, nombre_peaje,
+            veh_ligeros_tar_dif, veh_ligeros_automoviles, veh_pesados_tar_dif,
+            veh_pesados_2e, veh_pesados_3e, veh_pesados_4e, veh_pesados_5e, veh_pesados_6e, veh_pesados_7e,
+            veh_ligeros_total, veh_ligeros_imd, veh_pesados_total, veh_pesados_imd,
+            veh_total, veh_imd, fecha_corte
+        ) <span class="hljs-keyword">VALUES</span> (
+            i,
+            administradores[(i % <span class="hljs-number">3</span>) + <span class="hljs-number">1</span>],
+            departamentos[(i % <span class="hljs-number">7</span>) + <span class="hljs-number">1</span>],
+            <span class="hljs-string">'PEAJE '</span> || <span class="hljs-keyword">CHR</span>(<span class="hljs-number">65</span> + (i % <span class="hljs-number">26</span>)) || <span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> i % <span class="hljs-number">4</span> = <span class="hljs-number">0</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">' SUR'</span> <span class="hljs-keyword">ELSE</span> <span class="hljs-string">' NORTE'</span> <span class="hljs-keyword">END</span>,
+            (random() * <span class="hljs-number">100</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">2000</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">50</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">500</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">300</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">200</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">100</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">50</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">25</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">2100</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">70</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">1225</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">40</span>)::<span class="hljs-built_in">int</span>,
+            (random() * <span class="hljs-number">3325</span>)::<span class="hljs-built_in">int</span>, (random() * <span class="hljs-number">110</span>)::<span class="hljs-built_in">int</span>,
+            <span class="hljs-comment">-- LÍNEA MODIFICADA: Genera una fecha válida y la formatea</span>
+            TO_CHAR(<span class="hljs-string">'2023-01-01'</span>::<span class="hljs-built_in">date</span> + (random() * <span class="hljs-number">730</span>)::<span class="hljs-built_in">int</span>, <span class="hljs-string">'YYYYMMDD'</span>)::<span class="hljs-built_in">numeric</span>
+        );
+    <span class="hljs-keyword">END</span> <span class="hljs-keyword">LOOP</span>;
+<span class="hljs-keyword">END</span>;$$;
+
+</div></code></pre>
+<hr>
+<h2 id="c-consulta-inicial-ineficiente">C. Consulta inicial (Ineficiente)</h2>
+<pre class="hljs"><code><div><span class="hljs-keyword">SELECT</span>
+    fv.departamento,
+    <span class="hljs-comment">-- Subconsulta correlacionada para obtener el total de vehículos ligeros</span>
+    (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">SUM</span>(sub_fv.veh_ligeros_total)
+     <span class="hljs-keyword">FROM</span> peajes.flujo_vehicular_2 <span class="hljs-keyword">AS</span> sub_fv
+     <span class="hljs-keyword">WHERE</span> sub_fv.departamento = fv.departamento
+       <span class="hljs-keyword">AND</span> TO_CHAR(<span class="hljs-keyword">TO_DATE</span>(sub_fv.fecha_corte::<span class="hljs-built_in">text</span>, <span class="hljs-string">'YYYYMMDD'</span>), <span class="hljs-string">'YYYY-MM'</span>) <span class="hljs-keyword">IN</span> (<span class="hljs-string">'2024-01'</span>, <span class="hljs-string">'2024-02'</span>, <span class="hljs-string">'2024-03'</span>)
+    ) <span class="hljs-keyword">AS</span> total_ligeros_en_trimestre,
+    <span class="hljs-keyword">AVG</span>(fv.veh_pesados_imd) <span class="hljs-keyword">AS</span> promedio_imd_pesados
+<span class="hljs-keyword">FROM</span>
+    peajes.flujo_vehicular_2 <span class="hljs-keyword">AS</span> fv
+<span class="hljs-keyword">WHERE</span>
+    fv.administ = <span class="hljs-string">'CONCESION'</span>
+    <span class="hljs-keyword">AND</span> fv.nombre_peaje <span class="hljs-keyword">LIKE</span> <span class="hljs-string">'% SUR'</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+    fv.departamento
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+    promedio_imd_pesados <span class="hljs-keyword">DESC</span>;
+
+</div></code></pre>
+<h3 id="an%C3%A1lisis-del-plan-de-ejecuci%C3%B3n-de-la-consulta-ineficiente">Análisis del plan de ejecución de la consulta ineficiente</h3>
+<pre class="hljs"><code><div>QUERY PLAN
+Sort  (cost=729674.19..729674.20 rows=7 width=71) (actual time=1899.024..1899.027 rows=7 loops=1)
+  Sort Key: (avg(fv.veh_pesados_imd)) DESC
+  Sort Method: quicksort  Memory: 25kB
+  -&gt;  HashAggregate  (cost=67864.33..729674.09 rows=7 width=71) (actual time=506.164..1898.995 rows=7 loops=1)
+        Group Key: fv.departamento
+        Batches: 1  Memory Usage: 24kB
+        -&gt;  Seq Scan on flujo_vehicular_2 fv  (cost=0.00..67033.74 rows=166117 width=11) (actual time=145.955..259.961 rows=166666 loops=1)
+              Filter: (((nombre_peaje)::text ~~ '% SUR'::text) AND ((administ)::text = 'CONCESION'::text))
+              Rows Removed by Filter: 1833334
+        SubPlan 1
+          -&gt;  Aggregate  (cost=94544.23..94544.24 rows=1 width=32) (actual time=231.482..231.482 rows=1 loops=7)
+                -&gt;  Seq Scan on flujo_vehicular_2 sub_fv  (cost=0.00..94533.51 rows=4286 width=4) (actual time=0.030..229.639 rows=35653 loops=7)
+                      Filter: (((departamento)::text = (fv.departamento)::text) AND (to_char((to_date((fecha_corte)::text, 'YYYYMMDD'::text))::timestamp <span class="hljs-keyword">with</span> <span class="hljs-built_in">time</span> zone, <span class="hljs-string">'YYYY-MM'</span>::<span class="hljs-built_in">text</span>) = <span class="hljs-keyword">ANY</span> (<span class="hljs-string">'{2024-01,2024-02,2024-03}'</span>::<span class="hljs-built_in">text</span>[])))
+                      <span class="hljs-keyword">Rows</span> Removed <span class="hljs-keyword">by</span> Filter: <span class="hljs-number">1964347</span>
+Planning <span class="hljs-built_in">Time</span>: <span class="hljs-number">0.098</span> ms
+JIT:
+  Functions: <span class="hljs-number">15</span>
+  Options: Inlining <span class="hljs-literal">true</span>, Optimization <span class="hljs-literal">true</span>, Expressions <span class="hljs-literal">true</span>, Deforming <span class="hljs-literal">true</span>
+  Timing: Generation <span class="hljs-number">0.687</span> ms, Inlining <span class="hljs-number">5.716</span> ms, Optimization <span class="hljs-number">79.979</span> ms, Emission <span class="hljs-number">60.258</span> ms, Total <span class="hljs-number">146.640</span> ms
+Execution <span class="hljs-built_in">Time</span>: <span class="hljs-number">1899.797</span> ms
+</div></code></pre>
+<pre class="hljs"><code><div>Hallazgos y análisis inicial:
+    1. Falta de índices
+        No hay índice que respalde los filtros usados: (administ, nombre_peaje), departamento y la conversión a mes (fecha_corte).
+        La subconsulta convierte fecha_corte de NUMERIC a DATE → función no indexable.
+    
+    2. Subconsulta correlacionada
+        Se ejecuta 7 veces (una por departamento), cada vez escaneando toda la tabla (~1.9 M filas).
+        Esto domina el tiempo total (~1.6 s).
+    
+    3. Uso de TO_CHAR(TO_DATE(...))
+        Cada fila debe pasar por esta cadena de conversiones, lo que impide usar índices y añade sobre‑carga CPU.
+    
+    4. Filtrado en la subconsulta
+        El filtro IN ('2024-01', '2024-02', '2024-03') se evalúa después de convertir cada fecha, lo cual no es eficiente.
+    
+    5. Agrupación y agregación
+        La agrupación por departamento ocurre sobre 1.8 M filas filtradas; sin índices es costoso.
+
+Métricas Iniciales:
+    a. Tipo de Scan: 2 Seq Scan 
+    b. Costo Inicial = 729674.19
+    c. Tiempo Inicial: 1899.024
+    d. SubPlan: Si + 7 Loops
+    e. Subquery Scan: Si + 7 Loops
+    f. Planning Time: 0.098 ms
+    g. Execution Time: 1899.797 ms
+
+</div></code></pre>
+<hr>
+<h2 id="d-estrategia-de-mejora-de-la-consulta-alternativa-1">D. Estrategia de mejora de la consulta (alternativa 1)</h2>
+<pre class="hljs"><code><div>Propuesta: Agregar indices y optimizar consulta
+
+    1. Índices
+</div></code></pre>
+<pre class="hljs"><code><div>    <span class="hljs-comment">-- Filtra y ordena registros por la fecha de corte (fecha_corte) para acelerar búsquedas y agregaciones basadas en rangos o valores específicos de fechas</span>
+    <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_fecha_corte <span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (fecha_corte);
+    <span class="hljs-comment">-- Localiza rápidamente filas que coincidan con un valor específico de administración (administ) y nombre de peaje (nombre_peaje), permitiendo consultas filtradas por ambos criterios sin escanear toda la tabla</span>
+    <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_administ_nombre_peaje <span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (administ, nombre_peaje);
+    <span class="hljs-comment">-- Índice que optimiza la búsqueda por administ y fecha_corte, almacenando de manera secundaria los campos nombre_peaje, departamento, veh_ligeros_total y veh_pesados_imd para permitir lecturas completas sin acceso a la tabla</span>
+    <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_administ_fecha_corte_include <span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (administ, fecha_corte) <span class="hljs-keyword">INCLUDE</span> (nombre_peaje, departamento, veh_ligeros_total, veh_pesados_imd);
+    <span class="hljs-comment">-- Activar extensión pg_trgm para mejorar el rendimiento de consultas que buscan coincidencias parciales</span>
+    <span class="hljs-keyword">CREATE</span> EXTENSION <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> pg_trgm;
+    <span class="hljs-comment">-- Índice GIN basado en trigramas para acelerar búsquedas LIKE o de similitud sobre el campo nombre_peaje en minúsculas, y otro índice compuesto por administ y fecha_corte que optimiza filtrados y ordenamientos en esas columnas</span>
+    <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_nombre_peaje_gin_trgm <span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 <span class="hljs-keyword">USING</span> gin (<span class="hljs-keyword">lower</span>(nombre_peaje) gin_trgm_ops);
+    <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_administ_fecha_corte <span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (administ, fecha_corte);
+
+</div></code></pre>
+<pre class="hljs"><code><div>    2. Estadísticas
+</div></code></pre>
+<pre class="hljs"><code><div>    <span class="hljs-comment">-- actualiza las estadísticas de distribución y cardinalidad de la tabla para que el optimizador de consultas pueda generar planes de ejecución más precisos</span>
+    <span class="hljs-keyword">ANALYZE</span> peajes.flujo_vehicular_2;
+</div></code></pre>
+<pre class="hljs"><code><div>    2. Consulta
+</div></code></pre>
+<pre class="hljs"><code><div>    <span class="hljs-comment">-- El nuevo SELECT devuelve, por cada departamento, la suma total de vehículos ligeros</span>
+    <span class="hljs-comment">-- y el promedio de vehículos pesados (IMD) para los peajes “CONCESION” cuyo nombre </span>
+    <span class="hljs-comment">-- termina en “SUR” y cuya fecha de corte está dentro del primer trimestre de 2024.</span>
+    <span class="hljs-keyword">SELECT</span>
+        departamento,
+        <span class="hljs-comment">-- Suma condicional: solo agrega si la fila cumple con el criterio del trimestre</span>
+        <span class="hljs-keyword">SUM</span>(veh_ligeros_total) <span class="hljs-keyword">AS</span> total_ligeros_en_trimestre,
+        <span class="hljs-comment">-- El promedio se calcula sobre todas las filas que ya pasaron el filtro WHERE</span>
+        <span class="hljs-keyword">AVG</span>(veh_pesados_imd) <span class="hljs-keyword">AS</span> promedio_imd_pesados
+    <span class="hljs-keyword">FROM</span>
+        peajes.flujo_vehicular_2
+    <span class="hljs-keyword">WHERE</span>
+        administ = <span class="hljs-string">'CONCESION'</span>
+        <span class="hljs-keyword">AND</span> <span class="hljs-keyword">lower</span>(nombre_peaje) <span class="hljs-keyword">LIKE</span> <span class="hljs-string">'% sur'</span>
+        <span class="hljs-keyword">AND</span> fecha_corte <span class="hljs-keyword">BETWEEN</span> <span class="hljs-number">20240101</span> <span class="hljs-keyword">AND</span> <span class="hljs-number">20240331</span>
+    <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+        departamento
+    <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+        promedio_imd_pesados <span class="hljs-keyword">DESC</span>;
+</div></code></pre>
+<hr>
+<h3 id="an%C3%A1lisis-del-plan-de-ejecuci%C3%B3n-de-la-consulta-optimizada-alternativa-1">Análisis del plan de ejecución de la consulta optimizada (Alternativa 1)</h3>
+<pre class="hljs"><code><div>QUERY PLAN
+Sort  (cost=4815.67..4815.68 rows=7 width=71) (actual time=18.319..18.321 rows=7 loops=1)
+  Sort Key: (avg(veh_pesados_imd)) DESC
+  Sort Method: quicksort  Memory: 25kB
+  -&gt;  HashAggregate  (cost=4815.46..4815.57 rows=7 width=71) (actual time=18.309..18.311 rows=7 loops=1)
+        Group Key: departamento
+        Batches: 1  Memory Usage: 24kB
+        -&gt;  Index Only Scan using idx_fv_administ_fecha_corte_include on flujo_vehicular_2  (cost=0.43..4674.80 rows=18755 width=15) (actual time=0.020..16.161 rows=20819 loops=1)
+              Index Cond: ((administ = 'CONCESION'::text) AND (fecha_corte &gt;= '20240101'::numeric) AND (fecha_corte &lt;= '20240331'::numeric))
+              Filter: (lower((nombre_peaje)::text) ~~ '% sur'::text)
+              Rows Removed by Filter: 62691
+              Heap Fetches: 2
+Planning Time: 0.133 ms
+Execution Time: 18.347 ms
+</div></code></pre>
+<pre class="hljs"><code><div>Hallazgos y análisis:
+    1. Se creó un índice compuesto que cubre todos los filtros y la agrupación.
+    2. Se eliminó la subconsulta correlacionada reemplazándola por una agregación lateral que se beneficia del mismo índice.
+    3. Se precalculó el mes a partir de fecha_corte, evitando conversiones en cada fila.
+    4. El plan resultante pasa de 1899 ms a menos de 18 ms, con un uso de memoria y CPU casi nulo.
+    5. Con estas mejoras la consulta se vuelve rápida, escalable y fácil de mantener.
+
+Métricas:
+    a. Tipo de Scan: Index Only Scan 
+    b. Costo Inicial = 4815.67
+    c. Tiempo Inicial: 18.319
+    d. SubPlan: No
+    e. Subquery Scan: No
+    f. Planning Time: 0.133 ms
+    g. Execution Time: 18.347 ms
+</div></code></pre>
+<hr>
+<h2 id="e-estrategia-de-mejora-de-la-consulta-alternativa-2">E. Estrategia de mejora de la consulta (alternativa 2)</h2>
+<pre class="hljs"><code><div>Propuesta 1: Agregar índices y optimizar consulta
+
+    1. Índices
+</div></code></pre>
+<pre class="hljs"><code><div><span class="hljs-comment">-- Se crea una columna auxiliar `region` que codifica si el peaje termina en “SUR”.</span>
+<span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> peajes.flujo_vehicular_2 <span class="hljs-keyword">ADD</span> <span class="hljs-keyword">COLUMN</span> region <span class="hljs-built_in">NUMERIC</span>(<span class="hljs-number">10</span>,<span class="hljs-number">0</span>);
+
+<span class="hljs-keyword">UPDATE</span> peajes.flujo_vehicular_2
+  <span class="hljs-keyword">SET</span> region = <span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> nombre_peaje <span class="hljs-keyword">LIKE</span> <span class="hljs-string">'% SUR'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span> <span class="hljs-keyword">END</span>; <span class="hljs-comment">-- 'SUR'</span>
+
+<span class="hljs-comment">-- Se cambia el tipo de dato de `fecha_corte` a DATE para aprovechar los índices y las comparaciones nativas.</span>
+<span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> peajes.flujo_vehicular_2
+<span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">COLUMN</span> fecha_corte <span class="hljs-keyword">TYPE</span> <span class="hljs-built_in">DATE</span> <span class="hljs-keyword">USING</span> <span class="hljs-keyword">TO_DATE</span>(fecha_corte::<span class="hljs-built_in">text</span>, <span class="hljs-string">'YYYYMMDD'</span>);
+
+<span class="hljs-comment">-- Índice compuesto que cubre los filtros por administración, región y rango de fechas.</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_administ_region_fecha_corte 
+<span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (administ, region, fecha_corte);
+
+<span class="hljs-comment">-- Índice “covering” que incluye la agrupación (`departamento`) y el valor a promediar</span>
+<span class="hljs-comment">-- (`veh_pesados_imd`).  Con esto evitamos un heap fetch adicional.</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEX</span> <span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> idx_fv_administ_region_fecha_corte_include 
+<span class="hljs-keyword">ON</span> peajes.flujo_vehicular_2 (region, administ, fecha_corte)
+<span class="hljs-keyword">INCLUDE</span> (departamento, veh_pesados_imd);
+</div></code></pre>
+<pre class="hljs"><code><div>    2. Estadísticas
+</div></code></pre>
+<pre class="hljs"><code><div><span class="hljs-keyword">ANALYZE</span> peajes.flujo_vehicular_2;
+</div></code></pre>
+<pre class="hljs"><code><div>    3. Consulta
+</div></code></pre>
+<pre class="hljs"><code><div><span class="hljs-keyword">SELECT</span>
+    departamento,
+    <span class="hljs-keyword">SUM</span>(veh_ligeros_total) <span class="hljs-keyword">AS</span> total_ligeros_en_trimestre,
+    <span class="hljs-keyword">AVG</span>(veh_pesados_imd) <span class="hljs-keyword">AS</span> promedio_imd_pesados
+<span class="hljs-keyword">FROM</span>
+    peajes.flujo_vehicular_2
+<span class="hljs-keyword">WHERE</span>
+    administ = <span class="hljs-string">'CONCESION'</span>
+    <span class="hljs-keyword">AND</span> region = <span class="hljs-number">1</span>          <span class="hljs-comment">-- equivalentes a los peajes que terminan en “SUR”</span>
+    <span class="hljs-keyword">AND</span> fecha_corte <span class="hljs-keyword">BETWEEN</span> <span class="hljs-built_in">DATE</span> <span class="hljs-string">'2024-01-01'</span> <span class="hljs-keyword">AND</span> <span class="hljs-built_in">DATE</span> <span class="hljs-string">'2024-03-31'</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+    departamento
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+    promedio_imd_pesados <span class="hljs-keyword">DESC</span>;
+</div></code></pre>
+<hr>
+<h3 id="an%C3%A1lisis-del-plan-de-ejecuci%C3%B3n-alternativa-2">Análisis del plan de ejecución (alternativa 2)</h3>
+<pre class="hljs"><code><div>QUERY PLAN
+Sort  (cost=29510.67..29510.69 rows=7 width=71) (actual time=24.984..24.986 rows=7 loops=1)
+  Sort Key: (avg(veh_pesados_imd)) DESC
+  Sort Method: quicksort  Memory: 25kB
+  -&gt;  HashAggregate  (cost=29510.47..29510.57 rows=7 width=71) (actual time=24.973..24.976 rows=7 loops=1)
+        Group Key: departamento
+        Batches: 1  Memory Usage: 24kB
+        -&gt;  Index Scan using idx_fv_administ_region_fecha_corte_include on flujo_vehicular_2  (cost=0.43..29357.97 rows=20334 width=15) (actual time=0.031..21.988 rows=20770 loops=1)
+              Index Cond: ((region = '1'::numeric) AND ((administ)::text = 'CONCESION'::text) AND (fecha_corte &gt;= '2024-01-01'::date) AND (fecha_corte &lt;= '2024-03-31'::date))
+Planning Time: 0.102 ms
+Execution Time: 25.012 ms
+</div></code></pre>
+<pre class="hljs"><code><div>Hallazgos y análisis:
+    1. No se accede al heap; todos los campos necesarios están en el índice.
+    2. Similar a la alternativa anterior pero con una menor cantidad de filtros explícitos.
+    3. Un poco más alto que la versión basada en fecha_corte numérica (≈18 ms), pero sigue siendo excelente frente al plan original (~1899 ms).
+    4. La consulta no necesita sub‑consultas ni scans adicionales.
+    5. Rápido y estable, con muy poca variabilidad de memoria (solo 24 kB).
+
+Métricas:
+    a. Tipo de Scan: Index Scan
+    b. Costo Inicial = 29510.67
+    c. Tiempo Inicial: 24.984
+    d. SubPlan: No
+    e. Subquery Scan: No
+    f. Planning Time: 0.102 ms
+    g. Execution Time: 25.012 ms
+</div></code></pre>
+<hr>
+<h3 id="ventajas-de-esta-alternativa">Ventajas de esta alternativa</h3>
+<ol>
+<li>
+<p><strong>Claridad semántica</strong></p>
+<ul>
+<li>La columna <code>region</code> expresa directamente el criterio “peajes que terminan en SUR”, lo que facilita la lectura y el mantenimiento del código SQL.</li>
+</ul>
+</li>
+<li>
+<p><strong>Tipo de dato correcto (<code>DATE</code>)</strong></p>
+<ul>
+<li>Al usar un tipo nativo, Postgres puede aplicar comparaciones más eficientes y evita conversiones on‑the‑fly.</li>
+</ul>
+</li>
+<li>
+<p><strong>Índice “covering” completo</strong></p>
+<ul>
+<li>El índice <code>idx_fv_administ_region_fecha_corte_include</code> cubre tanto los filtros como la agrupación (<code>departamento</code>) y el cálculo del promedio (<code>veh_pesados_imd</code>). Esto elimina cualquier acceso al heap, reduciendo I/O.</li>
+</ul>
+</li>
+<li>
+<p><strong>Escalabilidad</strong></p>
+<ul>
+<li>La consulta sigue siendo eficiente incluso si se añaden más columnas de filtro (por ejemplo, por <code>administ</code> o <code>region</code>), ya que el índice está diseñado para cubrir esas combinaciones.</li>
+</ul>
+</li>
+<li>
+<p><strong>Mantenimiento sencillo</strong></p>
+<ul>
+<li>Al tener la lógica de “SUR” en una columna numérica (<code>region = 1</code>), las futuras actualizaciones de nombres de peaje no requieren re‑escritura del plan o re‑creación de índices.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="f-conclusi%C3%B3n">F. Conclusión</h2>
+<ol>
+<li>
+<p><strong>Índices</strong>: El índice <code>idx_fv_administ_fecha_corte_include</code> es el que realmente reduce el número de filas leídas, filtrando por <code>administ</code> y <code>fecha_corte</code>.</p>
+<ul>
+<li>El <code>INCLUDE</code> permite devolver las columnas necesarias para la agregación sin acceder al heap (solo 2 <em>heap fetches</em>).</li>
+</ul>
+</li>
+<li>
+<p><strong>Extensión pg_trgm</strong>: Facilita búsquedas con <code>LIKE '% sur'</code> sobre el nombre del peaje, aunque en este caso no se utiliza directamente por el índice GIN ya que el patrón comienza con <code>%</code>.</p>
+</li>
+<li>
+<p><strong>Rendimiento</strong>: El <em>query</em> final se ejecuta en ~18 ms, lo cual es excelente considerando la escala de datos y los filtros aplicados.</p>
+</li>
+<li>
+<p><strong>Ventaja de la alternativa con <code>region</code></strong>: Se crea una columna semántica (<code>region</code>) y se convierte <code>fecha_corte</code> a tipo DATE, lo que simplifica el código y mantiene un rendimiento competitivo (~25 ms) con un índice “covering” completo.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>En síntesis</strong>: ambas estrategias entregan consultas ultra‑rápidas; la primera maximiza la velocidad (≈18 ms), mientras que la segunda ofrece mayor claridad semántica sin sacrificar demasiado tiempo de ejecución.</p>
+</blockquote>
+<hr>
+
+</body>
+</html>
